@@ -64,6 +64,7 @@ void app_main(void) {
     uint16_t app_len = 0;
     int msg_count = 0;
     int frame_count = 0;
+    static uint32_t last_fc_time = 0;
     //esp_log_level_set("*", ESP_LOG_NONE);
     while (1) {
         // 1) Read raw CAN frames and feed ISO-TP (tăng timeout để catch tất cả frames)
@@ -94,16 +95,18 @@ void app_main(void) {
             // Ensure printable string
             uint16_t n = (app_len < sizeof(app_buf) - 1) ? app_len : (sizeof(app_buf) - 1);
             app_buf[n] = '\0';
-            
-            printf("\n════════════════════════════════════════════════\n");
-            printf("📦 CHUỖI HOÀN CHỈNH [#%d] (%u bytes)\n", msg_count, app_len);
+    
+  
             printf("════════════════════════════════════════════════\n");
             printf("Nội dung: %s\n", (char*)app_buf);
-            printf("════════════════════════════════════════════════\n\n");
         }
 //        vTaskDelay(pdMS_TO_TICKS(2));
         // 3) Poll the ISO-TP stack to send Flow Control & manage timeouts
-        isotp_poll(&g_link);
+           uint32_t now = isotp_user_get_ms();
+        if(now - last_fc_time > 10) {  // Chỉ poll mỗi 10ms
+            isotp_poll(&g_link);
+            last_fc_time = now;
+        }
         vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
